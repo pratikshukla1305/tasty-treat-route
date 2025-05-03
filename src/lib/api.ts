@@ -363,16 +363,17 @@ export const cart = {
     
     // Check if adding from a different restaurant
     if (currentCart.length > 0 && currentCart[0].restaurant_id !== item.restaurant_id) {
-      // Show toast with action button
+      // Show toast with action button - using object instead of JSX
       toast({
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
-        action: <ToastAction altText="Clear Cart" onClick={() => {
-          cart.clearCart();
-          cart.addItem(item);
-        }}>
-          Clear Cart
-        </ToastAction>,
+        action: {
+          label: "Clear Cart",
+          onClick: () => {
+            cart.clearCart();
+            cart.addItem(item);
+          },
+        },
       });
       return false;
     }
