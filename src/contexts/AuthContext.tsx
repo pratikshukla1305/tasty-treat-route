@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { auth, User } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await auth.login(email, password);
+      
+      if (!response || !response.token || !response.user) {
+        toast({
+          title: "Login Failed",
+          description: "Invalid response from the server.",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
       localStorage.setItem("foodAppToken", response.token);
       setUser(response.user);
       setIsAdmin(response.user.customer_id < 5); // Same admin check as above
@@ -68,6 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error) {
       console.error("Login failed", error);
+      
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : "Invalid email or password.",
+        variant: "destructive",
+      });
+      
       return false;
     }
   };
@@ -84,7 +102,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Check if we have a valid response with user data
       if (!response || !response.user) {
-        throw new Error("Registration failed - invalid response");
+        toast({
+          title: "Registration Failed",
+          description: "Invalid response from the server.",
+          variant: "destructive",
+        });
+        return false;
       }
       
       localStorage.setItem("foodAppToken", response.token);
