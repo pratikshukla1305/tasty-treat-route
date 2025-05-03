@@ -1,5 +1,7 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { query } from "./db";
+import { ToastAction } from "@/components/ui/toast";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -365,13 +367,14 @@ export const cart = {
       toast({
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
-        action: {
-          actionText: "Clear Cart",
-          onClick: () => {
+        action: (
+          <ToastAction onClick={() => {
             cart.clearCart();
             cart.addItem(item);
-          },
-        },
+          }}>
+            Clear Cart
+          </ToastAction>
+        ),
       });
       return false;
     }
