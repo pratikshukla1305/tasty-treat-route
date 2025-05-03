@@ -22,15 +22,37 @@ import {
   MapPin, Calendar, Clock, CreditCard, User, Package
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { testConnection } from "@/lib/db";
 
 const AdminOrders = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null);
   const { toast } = useToast();
 
+  // Test database connection on component mount
+  React.useEffect(() => {
+    const checkDbConnection = async () => {
+      const isConnected = await testConnection();
+      if (isConnected) {
+        toast({
+          title: "Database Connected",
+          description: "Successfully connected to MySQL database",
+        });
+      } else {
+        toast({
+          title: "Database Connection Failed",
+          description: "Could not connect to MySQL database. Check your credentials.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    checkDbConnection();
+  }, []);
+
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ["adminOrders", statusFilter],
-    queryFn: () => admin.getAllOrders(statusFilter),
+    queryFn: () => admin.getAllOrders(statusFilter || undefined),
   });
 
   const filteredOrders = React.useMemo(() => {

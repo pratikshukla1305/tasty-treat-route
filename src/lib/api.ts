@@ -1,6 +1,5 @@
-
 import { toast } from "@/components/ui/use-toast";
-import { ToastAction } from "@/components/ui/toast";
+import { query } from "./db";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -28,6 +27,167 @@ async function fetchApi<T>(
   }
 
   try {
+    // For local development, we'll directly use database queries instead of API calls
+    if (endpoint.startsWith("/restaurants")) {
+      // Handle restaurant-related endpoints directly with MySQL
+      if (endpoint === "/restaurants") {
+        const restaurants = await query<Restaurant[]>('SELECT * FROM restaurant');
+        return restaurants as unknown as T;
+      } 
+      else if (endpoint.startsWith("/restaurants/")) {
+        const id = endpoint.split("/").pop();
+        if (id) {
+          const restaurant = await query<Restaurant[]>('SELECT * FROM restaurant WHERE res_id = ?', [id]);
+          return (restaurant[0] || null) as unknown as T;
+        }
+      }
+    }
+    else if (endpoint.startsWith("/foods")) {
+      // Handle food-related endpoints directly with MySQL
+      if (endpoint === "/foods") {
+        const foods = await query<Food[]>('SELECT * FROM food');
+        return foods as unknown as T;
+      }
+      else if (endpoint.startsWith("/foods/restaurant/")) {
+        const restaurantId = endpoint.split("/").pop();
+        if (restaurantId) {
+          const foods = await query<Food[]>('SELECT * FROM food WHERE restaurant_id = ?', [restaurantId]);
+          return foods as unknown as T;
+        }
+      }
+    }
+    else if (endpoint.startsWith("/orders")) {
+      // Handle order-related endpoints
+      if (endpoint === "/orders") {
+        // Create order
+        if (options.method === "POST") {
+          const orderData = JSON.parse(options.body as string) as Order;
+          // Insert order into database and get order_id
+          const result = await query<any>(
+            'INSERT INTO orders (customer_id, res_id, order_status, total_amount) VALUES (?, ?, "pending", ?)', 
+            [orderData.customer_id, orderData.res_id, orderData.total_amount || 0]
+          );
+          
+          const orderId = result.insertId;
+          
+          // Insert order items
+          for (const item of orderData.items) {
+            await query(
+              'INSERT INTO order_items (order_id, food_id, quantity) VALUES (?, ?, ?)',
+              [orderId, item.food_id, item.quantity]
+            );
+          }
+          
+          // Fetch the created order
+          const order = await query<Order[]>(
+            'SELECT * FROM orders WHERE order_id = ?', 
+            [orderId]
+          );
+          
+          return order[0] as unknown as T;
+        }
+      }
+      else if (endpoint === "/orders/user") {
+        // Get user orders
+        const token = localStorage.getItem("foodAppToken");
+        if (!token) throw new Error("Not authenticated");
+        
+        // Extract user ID from token (in a real app, you'd verify the token)
+        // This is just a mock implementation
+        const customerId = 1; // Replace with actual logic to get customer_id from token
+        
+        const orders = await query<Order[]>(
+          `SELECT o.*, r.res_name as restaurant_name 
+           FROM orders o 
+           JOIN restaurant r ON o.res_id = r.res_id 
+           WHERE o.customer_id = ? 
+           ORDER BY o.ordered_time DESC`,
+          [customerId]
+        );
+        
+        // Get items for each order
+        for (const order of orders) {
+          const items = await query<OrderItem[]>(
+            `SELECT oi.*, f.food_name, f.price_per_unit 
+             FROM order_items oi 
+             JOIN food f ON oi.food_id = f.food_id 
+             WHERE oi.order_id = ?`,
+            [order.order_id]
+          );
+          order.items = items;
+        }
+        
+        return orders as unknown as T;
+      }
+    }
+    else if (endpoint.startsWith("/auth")) {
+      if (endpoint === "/auth/login" && options.method === "POST") {
+        const { email, password } = JSON.parse(options.body as string);
+        
+        const users = await query<User[]>(
+          'SELECT * FROM customer WHERE email = ?',
+          [email]
+        );
+        
+        if (users.length === 0) {
+          throw new Error("Invalid email or password");
+        }
+        
+        const user = users[0];
+        // In a real app, you'd hash passwords and compare hashes
+        // This is just a mock implementation for demonstration
+        
+        // Mock token generation
+        const token = `mock_token_${user.customer_id}`;
+        localStorage.setItem("foodAppToken", token);
+        
+        return {
+          token,
+          user
+        } as unknown as T;
+      }
+      else if (endpoint === "/auth/register" && options.method === "POST") {
+        const userData = JSON.parse(options.body as string);
+        
+        // Check if user already exists
+        const existingUsers = await query<User[]>(
+          'SELECT * FROM customer WHERE email = ?',
+          [userData.email]
+        );
+        
+        if (existingUsers.length > 0) {
+          throw new Error("Email already in use");
+        }
+        
+        // Insert new user
+        const result = await query<any>(
+          'INSERT INTO customer (customer_name, email, customer_contact_number, customer_address) VALUES (?, ?, ?, ?)',
+          [userData.customer_name, userData.email, userData.customer_contact_number, userData.customer_address]
+        );
+        
+        const customerId = result.insertId;
+        
+        // In a real app, you'd store hashed passwords in a separate table
+        // For demo purposes only
+        
+        // Fetch the created user
+        const users = await query<User[]>(
+          'SELECT * FROM customer WHERE customer_id = ?',
+          [customerId]
+        );
+        
+        const user = users[0];
+        const token = `mock_token_${customerId}`;
+        localStorage.setItem("foodAppToken", token);
+        
+        return {
+          token,
+          user
+        } as unknown as T;
+      }
+    }
+    
+    // For other endpoints or if database access fails, fall back to API call
     const response = await fetch(url, {
       ...options,
       headers,
@@ -206,8 +366,7 @@ export const cart = {
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
         action: {
-          children: "Clear Cart",
-          altText: "Clear Cart",
+          actionText: "Clear Cart",
           onClick: () => {
             cart.clearCart();
             cart.addItem(item);
@@ -282,52 +441,267 @@ export interface AdminDashboardData {
 }
 
 export const admin = {
-  getDashboardData: () => fetchApi<AdminDashboardData>("/admin/dashboard"),
+  getDashboardData: async () => {
+    // Get data from MySQL for dashboard
+    try {
+      // Total orders
+      const [totalOrdersResult] = await query<any[]>('SELECT COUNT(*) as count FROM orders');
+      const totalOrders = totalOrdersResult.count || 0;
+      
+      // Total revenue
+      const [totalRevenueResult] = await query<any[]>('SELECT SUM(total_amount) as total FROM orders');
+      const totalRevenue = totalRevenueResult.total || 0;
+      
+      // Total customers
+      const [totalCustomersResult] = await query<any[]>('SELECT COUNT(*) as count FROM customer');
+      const totalCustomers = totalCustomersResult.count || 0;
+      
+      // Recent orders
+      const recentOrders = await query<Order[]>(
+        `SELECT o.*, r.res_name as restaurant_name, c.customer_name 
+         FROM orders o 
+         JOIN restaurant r ON o.res_id = r.res_id 
+         JOIN customer c ON o.customer_id = c.customer_id 
+         ORDER BY o.ordered_time DESC LIMIT 5`
+      );
+      
+      // Top foods
+      const topFoods = await query<{ food_name: string; count: number }[]>(
+        `SELECT f.food_name, COUNT(oi.food_id) as count 
+         FROM order_items oi 
+         JOIN food f ON oi.food_id = f.food_id 
+         GROUP BY oi.food_id 
+         ORDER BY count DESC LIMIT 5`
+      );
+      
+      // Top restaurants
+      const topRestaurants = await query<{ res_name: string; count: number }[]>(
+        `SELECT r.res_name, COUNT(o.res_id) as count 
+         FROM orders o 
+         JOIN restaurant r ON o.res_id = r.res_id 
+         GROUP BY o.res_id 
+         ORDER BY count DESC LIMIT 5`
+      );
+      
+      return {
+        totalOrders,
+        totalRevenue,
+        totalCustomers,
+        recentOrders,
+        topFoods,
+        topRestaurants
+      } as AdminDashboardData;
+    } catch (error) {
+      console.error("Error getting admin dashboard data:", error);
+      throw error;
+    }
+  },
   
-  getAllOrders: (status?: string) => 
-    fetchApi<Order[]>(`/admin/orders${status ? `?status=${status}` : ''}`),
+  getAllOrders: async (status?: string) => {
+    try {
+      let sql = `
+        SELECT o.*, r.res_name as restaurant_name, c.customer_name, dp.deliveryp_name 
+        FROM orders o 
+        JOIN restaurant r ON o.res_id = r.res_id 
+        JOIN customer c ON o.customer_id = c.customer_id 
+        LEFT JOIN delivery_partner dp ON o.deliveryp_id = dp.deliveryp_id 
+      `;
+      
+      const params = [];
+      
+      if (status) {
+        sql += ' WHERE o.order_status = ?';
+        params.push(status);
+      }
+      
+      sql += ' ORDER BY o.ordered_time DESC';
+      
+      const orders = await query<Order[]>(sql, params);
+      
+      // Get items for each order
+      for (const order of orders) {
+        const items = await query<OrderItem[]>(
+          `SELECT oi.*, f.food_name, f.price_per_unit 
+           FROM order_items oi 
+           JOIN food f ON oi.food_id = f.food_id 
+           WHERE oi.order_id = ?`,
+          [order.order_id]
+        );
+        order.items = items;
+      }
+      
+      return orders;
+    } catch (error) {
+      console.error("Error getting admin orders:", error);
+      throw error;
+    }
+  },
     
-  getAllRestaurants: () => fetchApi<Restaurant[]>("/admin/restaurants"),
+  getAllRestaurants: () => query<Restaurant[]>('SELECT * FROM restaurant'),
   
-  updateRestaurant: (id: number, data: Partial<Restaurant>) =>
-    fetchApi<Restaurant>(`/admin/restaurants/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
+  updateRestaurant: async (id: number, data: Partial<Restaurant>) => {
+    try {
+      // Build the SET clause dynamically
+      const fields = Object.keys(data);
+      const values = Object.values(data);
+      
+      if (fields.length === 0) {
+        throw new Error("No fields to update");
+      }
+      
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      await query(
+        `UPDATE restaurant SET ${setClause} WHERE res_id = ?`,
+        [...values, id]
+      );
+      
+      // Fetch the updated restaurant
+      const restaurants = await query<Restaurant[]>(
+        'SELECT * FROM restaurant WHERE res_id = ?',
+        [id]
+      );
+      
+      return restaurants[0];
+    } catch (error) {
+      console.error("Error updating restaurant:", error);
+      throw error;
+    }
+  },
     
-  createRestaurant: (data: Omit<Restaurant, "res_id">) =>
-    fetchApi<Restaurant>("/admin/restaurants", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+  createRestaurant: async (data: Omit<Restaurant, "res_id">) => {
+    try {
+      const fields = Object.keys(data);
+      const values = Object.values(data);
+      const placeholders = fields.map(() => '?').join(', ');
+      
+      const result = await query<any>(
+        `INSERT INTO restaurant (${fields.join(', ')}) VALUES (${placeholders})`,
+        values
+      );
+      
+      const restaurantId = result.insertId;
+      
+      // Fetch the created restaurant
+      const restaurants = await query<Restaurant[]>(
+        'SELECT * FROM restaurant WHERE res_id = ?',
+        [restaurantId]
+      );
+      
+      return restaurants[0];
+    } catch (error) {
+      console.error("Error creating restaurant:", error);
+      throw error;
+    }
+  },
     
-  getAllFoods: () => fetchApi<Food[]>("/admin/foods"),
+  getAllFoods: () => query<Food[]>('SELECT * FROM food'),
   
-  updateFood: (id: number, data: Partial<Food>) =>
-    fetchApi<Food>(`/admin/foods/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
+  updateFood: async (id: number, data: Partial<Food>) => {
+    try {
+      // Build the SET clause dynamically
+      const fields = Object.keys(data);
+      const values = Object.values(data);
+      
+      if (fields.length === 0) {
+        throw new Error("No fields to update");
+      }
+      
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      
+      await query(
+        `UPDATE food SET ${setClause} WHERE food_id = ?`,
+        [...values, id]
+      );
+      
+      // Fetch the updated food
+      const foods = await query<Food[]>(
+        'SELECT * FROM food WHERE food_id = ?',
+        [id]
+      );
+      
+      return foods[0];
+    } catch (error) {
+      console.error("Error updating food:", error);
+      throw error;
+    }
+  },
     
-  createFood: (data: Omit<Food, "food_id">) =>
-    fetchApi<Food>("/admin/foods", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+  createFood: async (data: Omit<Food, "food_id">) => {
+    try {
+      const fields = Object.keys(data);
+      const values = Object.values(data);
+      const placeholders = fields.map(() => '?').join(', ');
+      
+      const result = await query<any>(
+        `INSERT INTO food (${fields.join(', ')}) VALUES (${placeholders})`,
+        values
+      );
+      
+      const foodId = result.insertId;
+      
+      // Fetch the created food
+      const foods = await query<Food[]>(
+        'SELECT * FROM food WHERE food_id = ?',
+        [foodId]
+      );
+      
+      return foods[0];
+    } catch (error) {
+      console.error("Error creating food:", error);
+      throw error;
+    }
+  },
     
-  getAllUsers: () => fetchApi<User[]>("/admin/users"),
+  getAllUsers: () => query<User[]>('SELECT * FROM customer'),
   
-  getDeliveryPartners: () => fetchApi<any[]>("/admin/delivery-partners"),
+  getDeliveryPartners: () => query<any[]>('SELECT * FROM delivery_partner'),
   
-  assignDeliveryPartner: (orderId: number, deliveryPartnerId: number) =>
-    fetchApi<Order>(`/admin/orders/${orderId}/assign-delivery`, {
-      method: "PUT",
-      body: JSON.stringify({ deliveryp_id: deliveryPartnerId }),
-    }),
+  assignDeliveryPartner: async (orderId: number, deliveryPartnerId: number) => {
+    try {
+      await query(
+        'UPDATE orders SET deliveryp_id = ? WHERE order_id = ?',
+        [deliveryPartnerId, orderId]
+      );
+      
+      // Fetch the updated order
+      const orders = await query<Order[]>(
+        `SELECT o.*, r.res_name as restaurant_name, dp.deliveryp_name 
+         FROM orders o 
+         JOIN restaurant r ON o.res_id = r.res_id 
+         LEFT JOIN delivery_partner dp ON o.deliveryp_id = dp.deliveryp_id 
+         WHERE o.order_id = ?`,
+        [orderId]
+      );
+      
+      return orders[0];
+    } catch (error) {
+      console.error("Error assigning delivery partner:", error);
+      throw error;
+    }
+  },
     
-  updateStatus: (orderId: number, status: string) =>
-    fetchApi<Order>(`/admin/orders/${orderId}/status`, {
-      method: "PUT", 
-      body: JSON.stringify({ status }),
-    }),
+  updateStatus: async (orderId: number, status: string) => {
+    try {
+      await query(
+        'UPDATE orders SET order_status = ? WHERE order_id = ?',
+        [status, orderId]
+      );
+      
+      // Fetch the updated order
+      const orders = await query<Order[]>(
+        `SELECT o.*, r.res_name as restaurant_name, dp.deliveryp_name 
+         FROM orders o 
+         JOIN restaurant r ON o.res_id = r.res_id 
+         LEFT JOIN delivery_partner dp ON o.deliveryp_id = dp.deliveryp_id 
+         WHERE o.order_id = ?`,
+        [orderId]
+      );
+      
+      return orders[0];
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      throw error;
+    }
+  },
 };
