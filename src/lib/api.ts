@@ -1,3 +1,4 @@
+
 import { toast } from "@/components/ui/use-toast";
 
 const API_URL = "http://localhost:5000/api";
@@ -199,13 +200,12 @@ export const cart = {
     
     // Check if adding from a different restaurant
     if (currentCart.length > 0 && currentCart[0].restaurant_id !== item.restaurant_id) {
-      // Show toast with action button through a function
+      // Show toast with action button
       toast({
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
-        variant: "destructive",
         action: {
-          label: "Clear Cart",
+          altText: "Clear Cart",
           onClick: () => {
             cart.clearCart();
             cart.addItem(item);
@@ -321,5 +321,11 @@ export const admin = {
     fetchApi<Order>(`/admin/orders/${orderId}/assign-delivery`, {
       method: "PUT",
       body: JSON.stringify({ deliveryp_id: deliveryPartnerId }),
+    }),
+    
+  updateStatus: (orderId: number, status: string) =>
+    fetchApi<Order>(`/admin/orders/${orderId}/status`, {
+      method: "PUT", 
+      body: JSON.stringify({ status }),
     }),
 };

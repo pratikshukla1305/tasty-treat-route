@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import AdminLayout from "@/components/Layout/AdminLayout";
@@ -27,10 +28,10 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = React.useState<string | null>(null);
   const { toast } = useToast();
 
-  const { data: orders, isLoading, refetch } = useQuery(
-    ["adminOrders", statusFilter],
-    () => admin.getAllOrders(statusFilter)
-  );
+  const { data: orders, isLoading, refetch } = useQuery({
+    queryKey: ["adminOrders", statusFilter],
+    queryFn: () => admin.getAllOrders(statusFilter),
+  });
 
   const filteredOrders = React.useMemo(() => {
     if (!orders) return [];
@@ -75,10 +76,10 @@ const AdminOrders = () => {
     }
   };
 
-  const { data: deliveryPartners } = useQuery(
-    "deliveryPartners",
-    () => admin.getDeliveryPartners()
-  );
+  const { data: deliveryPartners } = useQuery({
+    queryKey: ["deliveryPartners"],
+    queryFn: () => admin.getDeliveryPartners(),
+  });
 
   return (
     <AdminLayout>
@@ -112,7 +113,7 @@ const AdminOrders = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {deliveryPartners?.map((partner) => (
+                    {deliveryPartners && deliveryPartners.map((partner) => (
                       <DropdownMenuItem key={partner.deliveryp_id}>
                         {partner.deliveryp_name}
                       </DropdownMenuItem>
@@ -200,10 +201,10 @@ const AdminOrders = () => {
                                   Mark as Cancelled
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
-                                  <DropdownMenuContent>
+                                  <DropdownMenu>
                                     <DropdownMenuTrigger>Assign Delivery Partner</DropdownMenuTrigger>
                                     <DropdownMenuContent>
-                                      {deliveryPartners?.map((partner) => (
+                                      {deliveryPartners && deliveryPartners.map((partner) => (
                                         <DropdownMenuItem
                                           key={partner.deliveryp_id}
                                           onClick={() => handleAssignDeliveryPartner(order.order_id || 0, partner.deliveryp_id)}
@@ -212,7 +213,7 @@ const AdminOrders = () => {
                                         </DropdownMenuItem>
                                       ))}
                                     </DropdownMenuContent>
-                                  </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

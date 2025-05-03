@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/Layout/MainLayout";
@@ -217,7 +218,12 @@ const Index = () => {
             <div className="relative">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 transition-transform duration-300">
                 {featuredFoods.slice(foodIndex, foodIndex + 3).map((food) => (
-                  <FoodCard key={food.food_id} food={food} />
+                  <FoodCard 
+                    key={food.food_id} 
+                    food={food} 
+                    restaurantId={food.restaurant_id || 0}
+                    restaurantName="Featured Restaurant"
+                  />
                 ))}
               </div>
               {featuredFoods.length > 3 && (
