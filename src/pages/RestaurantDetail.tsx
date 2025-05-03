@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +6,7 @@ import FoodCard from "@/components/ui/food-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { restaurants, foods, Restaurant, Food } from "@/lib/api";
-import { Star, Clock, MapPin, Search, ChevronUp, ChevronDown, Info } from "lucide-react";
+import { Star, Clock, MapPin, Search, ChevronUp, ChevronDown, Info, Check } from "lucide-react";
 
 interface FoodCategory {
   name: string;

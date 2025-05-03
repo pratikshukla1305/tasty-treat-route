@@ -1,9 +1,8 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/Layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, MapPin, Receipt, ChevronRight } from "lucide-react";
+import { CheckCircle, Clock, MapPin, Receipt, ChevronRight, Check, Home, Package } from "lucide-react";
 
 const OrderConfirmation = () => {
   const navigate = useNavigate();
@@ -51,7 +50,7 @@ const OrderConfirmation = () => {
               
               <div className="relative flex mb-6">
                 <div className="h-7 w-7 rounded-full bg-food-primary text-white flex items-center justify-center flex-shrink-0 z-10">
-                  <SpatialAudio className="h-4 w-4" />
+                  <Clock className="h-4 w-4" />
                 </div>
                 <div className="ml-4">
                   <div className="font-medium">Food Preparation</div>

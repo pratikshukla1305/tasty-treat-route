@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/Layout/MainLayout";
@@ -10,8 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Settings, Bell, CreditCard, LogOut, ShoppingBag, Check } from "lucide-react";
+import { User, Settings, Bell, CreditCard, LogOut, ShoppingBag, Check, Key, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 const Profile = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -179,7 +181,7 @@ const Profile = () => {
                         <Textarea
                           id="customer_address"
                           name="customer_address"
-                          value={form.customer_address}
+                          value={formData.customer_address}
                           onChange={handleChange}
                           className="mt-1"
                           required

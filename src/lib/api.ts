@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 
 const API_URL = "http://localhost:5000/api";
@@ -186,6 +185,7 @@ export interface CartItem extends OrderItem {
   restaurant_id: number;
   restaurant_name?: string;
   image_url?: string;
+  is_vegetarian?: boolean;
 }
 
 export const cart = {
