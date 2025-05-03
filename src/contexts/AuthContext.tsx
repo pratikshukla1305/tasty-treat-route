@@ -82,14 +82,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }) => {
     try {
       const response = await auth.register(userData);
+      
+      // Check if we have a valid response with user data
+      if (!response || !response.user) {
+        throw new Error("Registration failed - invalid response");
+      }
+      
       localStorage.setItem("foodAppToken", response.token);
       setUser(response.user);
+      setIsAdmin(false); // New users aren't admins by default
       
       toast({
         title: "Registration Successful",
         description: `Welcome, ${response.user.customer_name}!`,
         variant: "default",
       });
+      
       return true;
     } catch (error) {
       console.error("Registration failed", error);

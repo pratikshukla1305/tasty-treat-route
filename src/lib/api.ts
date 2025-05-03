@@ -168,9 +168,6 @@ async function fetchApi<T>(
         
         const customerId = result.insertId;
         
-        // In a real app, you'd store hashed passwords in a separate table
-        // For demo purposes only
-        
         // Fetch the created user
         const users = await query<User[]>(
           'SELECT * FROM customer WHERE customer_id = ?',
@@ -178,6 +175,10 @@ async function fetchApi<T>(
         );
         
         const user = users[0];
+        if (!user) {
+          throw new Error("Failed to create user account");
+        }
+        
         const token = `mock_token_${customerId}`;
         localStorage.setItem("foodAppToken", token);
         
@@ -362,17 +363,16 @@ export const cart = {
     
     // Check if adding from a different restaurant
     if (currentCart.length > 0 && currentCart[0].restaurant_id !== item.restaurant_id) {
-      // Show toast with action button - using object instead of JSX
+      // Show toast with action button
       toast({
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
-        action: {
-          label: "Clear Cart",
-          onClick: () => {
-            cart.clearCart();
-            cart.addItem(item);
-          },
-        },
+        action: <ToastAction altText="Clear Cart" onClick={() => {
+          cart.clearCart();
+          cart.addItem(item);
+        }}>
+          Clear Cart
+        </ToastAction>,
       });
       return false;
     }
