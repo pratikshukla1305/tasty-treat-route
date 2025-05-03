@@ -205,12 +205,14 @@ export const cart = {
       toast({
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
-        action: <ToastAction altText="Clear Cart" onClick={() => {
-          cart.clearCart();
-          cart.addItem(item);
-        }}>
-          Clear Cart
-        </ToastAction>,
+        action: {
+          children: "Clear Cart",
+          altText: "Clear Cart",
+          onClick: () => {
+            cart.clearCart();
+            cart.addItem(item);
+          },
+        },
       });
       return false;
     }
