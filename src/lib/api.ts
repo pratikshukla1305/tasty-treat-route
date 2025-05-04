@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { query } from "./db";
 
@@ -55,6 +54,52 @@ async function fetchApi<T>(
           const foods = await query<Food[]>('SELECT * FROM foods WHERE res_id = ?', [restaurantId]);
           return foods as unknown as T;
         }
+      }
+      else if (endpoint === "/foods/featured") {
+        // Mock featured foods data
+        const featuredFoods: Food[] = [
+          { 
+            food_id: 101, 
+            food_name: "Margherita Pizza", 
+            price_per_unit: 12.99,
+            res_id: 301,
+            description: "Classic pizza with tomato sauce, mozzarella, and basil",
+            is_vegetarian: true,
+            is_bestseller: true,
+            image_url: "/food-1.jpg"
+          },
+          { 
+            food_id: 102, 
+            food_name: "Chicken Biryani", 
+            price_per_unit: 15.99,
+            res_id: 302,
+            description: "Fragrant rice dish with spiced chicken",
+            is_vegetarian: false,
+            is_bestseller: true,
+            image_url: "/food-2.jpg"
+          },
+          { 
+            food_id: 103, 
+            food_name: "Pasta Carbonara", 
+            price_per_unit: 14.50,
+            res_id: 303,
+            description: "Creamy pasta with bacon and egg",
+            is_vegetarian: false,
+            is_bestseller: true,
+            image_url: "/food-3.jpg"
+          },
+          { 
+            food_id: 104, 
+            food_name: "Vegetable Curry", 
+            price_per_unit: 11.99,
+            res_id: 304,
+            description: "Mixed vegetables in a spiced curry sauce",
+            is_vegetarian: true,
+            is_bestseller: false,
+            image_url: "/food-4.jpg"
+          }
+        ];
+        return featuredFoods as unknown as T;
       }
     }
     else if (endpoint.startsWith("/orders")) {
@@ -135,9 +180,69 @@ async function fetchApi<T>(
       if (endpoint === "/auth/login" && options.method === "POST") {
         const { email, password } = JSON.parse(options.body as string);
         
-        // In a real app, this would verify against the backend
-        // For browser development, we'll use our mock implementation
+        // Create demo account if trying to use demo credentials
+        if (email === "demo@example.com" && password === "password123") {
+          // Check if demo account exists
+          const demoUsers = await query<any[]>(
+            'SELECT * FROM users WHERE email = ?',
+            [email]
+          );
+          
+          if (demoUsers.length === 0) {
+            // Create demo user
+            await auth.register({
+              customer_name: "Demo User",
+              email: "demo@example.com",
+              password: "password123",
+              customer_contact_number: "1234567890",
+              customer_address: "123 Demo Street"
+            });
+          }
+          
+          // Now try to login again
+          const users = await query<any[]>(
+            'SELECT * FROM users WHERE email = ?',
+            [email]
+          );
+          
+          if (users.length === 0) {
+            throw new Error("Demo account creation failed");
+          }
+          
+          const user = users[0];
+          
+          // Get the customer details
+          const customers = await query<User[]>(
+            'SELECT * FROM customer WHERE user_id = ?',
+            [user.user_id]
+          );
+          
+          if (customers.length === 0) {
+            throw new Error("Customer details not found");
+          }
+          
+          const customer = customers[0];
+          
+          // Mock token generation
+          const token = `mock_token_${user.user_id}`;
+          localStorage.setItem("foodAppToken", token);
+          
+          // Map to existing interface
+          const userData: User = {
+            customer_id: customer.customer_id,
+            customer_name: customer.customer_name,
+            customer_contact_number: customer.customer_contact_number,
+            customer_address: customer.customer_address,
+            email: user.email
+          };
+          
+          return {
+            token,
+            user: userData
+          } as unknown as T;
+        }
         
+        // Regular login process
         // First find the user
         const users = await query<any[]>(
           'SELECT * FROM users WHERE email = ?',
@@ -149,7 +254,11 @@ async function fetchApi<T>(
         }
         
         const user = users[0];
+        
         // In a real app, you'd hash passwords and compare hashes
+        if (user.password !== password) {
+          throw new Error("Invalid email or password");
+        }
         
         // Get the customer details
         const customers = await query<User[]>(
@@ -222,6 +331,54 @@ async function fetchApi<T>(
           console.error("Registration error:", error);
           throw new Error("Failed to create user account");
         }
+      }
+      else if (endpoint === "/auth/me") {
+        // Get user data from token
+        const token = localStorage.getItem("foodAppToken");
+        if (!token) {
+          throw new Error("Not authenticated");
+        }
+        
+        // Extract user ID from token
+        const userId = token.split("_").pop();
+        if (!userId) {
+          throw new Error("Invalid token");
+        }
+        
+        // Find user by ID
+        const users = await query<any[]>(
+          'SELECT * FROM users WHERE user_id = ?',
+          [parseInt(userId, 10)]
+        );
+        
+        if (users.length === 0) {
+          throw new Error("User not found");
+        }
+        
+        const user = users[0];
+        
+        // Get customer details
+        const customers = await query<User[]>(
+          'SELECT * FROM customer WHERE user_id = ?',
+          [user.user_id]
+        );
+        
+        if (customers.length === 0) {
+          throw new Error("Customer details not found");
+        }
+        
+        const customer = customers[0];
+        
+        // Map to existing interface
+        const userData: User = {
+          customer_id: customer.customer_id,
+          customer_name: customer.customer_name,
+          customer_contact_number: customer.customer_contact_number,
+          customer_address: customer.customer_address,
+          email: user.email
+        };
+        
+        return userData as T;
       }
     }
     

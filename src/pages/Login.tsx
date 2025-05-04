@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const from = location.state?.from || "/";
   
   const [email, setEmail] = useState("");
@@ -34,6 +36,10 @@ const Login = () => {
       const success = await login(email, password);
       
       if (success) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
         navigate(from, { replace: true });
       } else {
         setError("Invalid credentials. Please try again.");
@@ -52,6 +58,10 @@ const Login = () => {
     try {
       const success = await login("demo@example.com", "password123");
       if (success) {
+        toast({
+          title: "Demo login successful",
+          description: "Welcome to the demo account!",
+        });
         navigate(from, { replace: true });
       } else {
         // If demo login fails, try to register a demo account
