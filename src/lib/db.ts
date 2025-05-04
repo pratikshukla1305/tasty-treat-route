@@ -7,14 +7,14 @@ const isBrowser = typeof window !== 'undefined';
 
 // Mock database tables for browser environment
 const mockTables = {
-  users: [],
-  customer: [],
-  restaurant: [],
-  foods: [],
-  delivery_partner: [],
-  order_detail: [],
-  order_food: [],
-  payment_table: []
+  users: [] as any[],
+  customer: [] as any[],
+  restaurant: [] as any[],
+  foods: [] as any[],
+  delivery_partner: [] as any[],
+  order_detail: [] as any[],
+  order_food: [] as any[],
+  payment_table: [] as any[]
 };
 
 // Mock implementation for browser
@@ -37,6 +37,12 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
       };
       
       mockTables.users.push(newUser);
+      
+      // Store in localStorage to persist across page refreshes
+      const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
+      storedUsers.push(newUser);
+      localStorage.setItem('mockUsers', JSON.stringify(storedUsers));
+      
       return { insertId: newUser.user_id } as unknown as T;
     }
     
@@ -52,6 +58,12 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
       };
       
       mockTables.customer.push(newCustomer);
+      
+      // Store in localStorage to persist across page refreshes
+      const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
+      storedCustomers.push(newCustomer);
+      localStorage.setItem('mockCustomers', JSON.stringify(storedCustomers));
+      
       return { insertId: newCustomer.customer_id } as unknown as T;
     }
     
@@ -59,16 +71,27 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
   } 
   // For SELECT queries
   else if (sql.toLowerCase().includes('select')) {
+    // Load stored data from localStorage
+    if (!mockTables.users.length) {
+      const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
+      mockTables.users = storedUsers;
+    }
+    
+    if (!mockTables.customer.length) {
+      const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
+      mockTables.customer = storedCustomers;
+    }
+    
     if (sql.includes('users WHERE email = ?') && params) {
       const email = params[0];
       const user = mockTables.users.find(u => u.email === email);
-      return user ? [user] : [] as unknown as T;
+      return user ? [user] as unknown as T : [] as unknown as T;
     }
     
     if (sql.includes('customer WHERE user_id = ?') && params) {
       const userId = params[0];
       const customer = mockTables.customer.find(c => c.user_id === userId);
-      return customer ? [customer] : [] as unknown as T;
+      return customer ? [customer] as unknown as T : [] as unknown as T;
     }
   }
   
@@ -135,5 +158,23 @@ export async function testConnection(): Promise<boolean> {
   } catch (error) {
     console.error('Database connection failed:', error);
     return false;
+  }
+}
+
+// Load stored mock data from localStorage on initialization
+if (isBrowser) {
+  try {
+    const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
+    const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
+    
+    mockTables.users = storedUsers;
+    mockTables.customer = storedCustomers;
+    
+    console.log('Loaded mock data from localStorage:', {
+      users: mockTables.users.length,
+      customers: mockTables.customer.length
+    });
+  } catch (error) {
+    console.error('Error loading mock data from localStorage:', error);
   }
 }

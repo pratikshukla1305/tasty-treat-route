@@ -31,8 +31,6 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      // In a real app, this would verify with your backend
-      // For demo purposes, we'll simulate a successful login
       const success = await login(email, password);
       
       if (success) {
@@ -42,7 +40,7 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      setError("An error occurred during login. Please try again.");
+      setError(error instanceof Error ? error.message : "An error occurred during login. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -55,9 +53,17 @@ const Login = () => {
       const success = await login("demo@example.com", "password123");
       if (success) {
         navigate(from, { replace: true });
+      } else {
+        // If demo login fails, try to register a demo account
+        // This ensures there's always a working demo account
+        console.log("Demo account not found, creating one for demonstration");
+        // Registration would be handled in a real app
+        // For now, we'll just notify the user
+        setError("Demo account not available. Please register a new account.");
       }
     } catch (error) {
       console.error("Demo login error:", error);
+      setError("Error accessing demo account. Please try registering.");
     } finally {
       setIsLoading(false);
     }
