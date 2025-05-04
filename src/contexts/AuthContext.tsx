@@ -43,9 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await auth.getCurrentUser();
       setUser(userData);
       
-      // For demonstration purposes, we'll consider any user with ID < 5 as admin
-      // In a real app, this would come from the backend as a role
-      setIsAdmin(userData.customer_id < 5);
+      // For demonstration purposes, we'll consider user with token containing "admin" as admin
+      // In a real app, this would come from the backend based on role
+      const token = localStorage.getItem("foodAppToken") || "";
+      setIsAdmin(token.includes("admin"));
     } catch (error) {
       console.error("Failed to load user data", error);
       localStorage.removeItem("foodAppToken");
@@ -69,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       localStorage.setItem("foodAppToken", response.token);
       setUser(response.user);
-      setIsAdmin(response.user.customer_id < 5); // Same admin check as above
+      
+      // Check if user is admin
+      setIsAdmin(response.token.includes("admin"));
       
       toast({
         title: "Login Successful",

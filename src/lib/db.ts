@@ -7,12 +7,14 @@ const isBrowser = typeof window !== 'undefined';
 
 // Mock database tables for browser environment
 const mockTables = {
+  users: [],
   customer: [],
   restaurant: [],
-  food: [],
+  foods: [],
   delivery_partner: [],
-  orders: [],
-  order_items: []
+  order_detail: [],
+  order_food: [],
+  payment_table: []
 };
 
 // Mock implementation for browser
@@ -24,12 +26,26 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
     const tableMatch = sql.match(/insert into\s+(\w+)/i);
     const tableName = tableMatch ? tableMatch[1].toLowerCase() : null;
     
+    if (tableName && tableName === 'users' && params) {
+      // For user registration
+      const newUser = {
+        user_id: Math.floor(Math.random() * 1000) + 1,
+        email: params[0],
+        password: params[1], // In a real app this would be hashed
+        role: params[2] || 'customer',
+        created_at: new Date().toISOString()
+      };
+      
+      mockTables.users.push(newUser);
+      return { insertId: newUser.user_id } as unknown as T;
+    }
+    
     if (tableName && tableName === 'customer' && params) {
       // For customer registration
       const newCustomer = {
         customer_id: Math.floor(Math.random() * 1000) + 1,
-        customer_name: params[0],
-        email: params[1],
+        user_id: params[0],
+        customer_name: params[1],
         customer_contact_number: params[2],
         customer_address: params[3],
         created_at: new Date().toISOString()
@@ -43,10 +59,16 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
   } 
   // For SELECT queries
   else if (sql.toLowerCase().includes('select')) {
-    if (sql.includes('customer WHERE email = ?') && params) {
+    if (sql.includes('users WHERE email = ?') && params) {
       const email = params[0];
-      const user = mockTables.customer.find(c => c.email === email);
+      const user = mockTables.users.find(u => u.email === email);
       return user ? [user] : [] as unknown as T;
+    }
+    
+    if (sql.includes('customer WHERE user_id = ?') && params) {
+      const userId = params[0];
+      const customer = mockTables.customer.find(c => c.user_id === userId);
+      return customer ? [customer] : [] as unknown as T;
     }
   }
   
@@ -66,8 +88,8 @@ if (!isBrowser) {
     const dbConfig = {
       host: process.env.DB_HOST || 'localhost',
       user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'srijan@2006',
-      database: process.env.DB_NAME || 'food_delivery', // Make sure this matches your database name
+      password: process.env.DB_PASSWORD || 'Rudraksh2005.',
+      database: process.env.DB_NAME || 'foodorderingdb', // Updated to match your database name
     };
 
     // Create connection pool
