@@ -1,7 +1,6 @@
 
 import { toast } from "@/hooks/use-toast";
 import { query } from "./db";
-import { ToastAction } from "@/components/ui/toast";
 
 const API_URL = "http://localhost:3000/api"; // Changed to match your backend port
 
@@ -245,7 +244,6 @@ async function fetchApi<T>(
       title: "Error",
       description: errorMessage,
       variant: "destructive",
-      action: <ToastAction altText="Try Again">Try Again</ToastAction>,
     });
     throw error;
   }
@@ -406,10 +404,6 @@ export const cart = {
       toast({
         title: "Different Restaurant",
         description: "Your cart contains items from a different restaurant. Would you like to clear your cart?",
-        action: <ToastAction altText="Clear Cart" onClick={() => {
-          cart.clearCart();
-          cart.addItem(item);
-        }}>Clear Cart</ToastAction>,
       });
       return false;
     }
