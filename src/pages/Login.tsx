@@ -33,6 +33,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting login with:", email, "and password");
       const success = await login(email, password);
       
       if (success) {
@@ -55,8 +56,13 @@ const Login = () => {
   // For demo purposes, we'll provide a dummy login
   const handleDemoLogin = async () => {
     setIsLoading(true);
+    setEmail("demo@example.com");
+    setPassword("password123");
+    
     try {
+      console.log("Attempting demo login");
       const success = await login("demo@example.com", "password123");
+      
       if (success) {
         toast({
           title: "Demo login successful",
@@ -64,11 +70,8 @@ const Login = () => {
         });
         navigate(from, { replace: true });
       } else {
-        // If demo login fails, try to register a demo account
-        // This ensures there's always a working demo account
-        console.log("Demo account not found, creating one for demonstration");
-        // Registration would be handled in a real app
-        // For now, we'll just notify the user
+        // If demo login fails, show a message
+        console.log("Demo login failed, please try registering");
         setError("Demo account not available. Please register a new account.");
       }
     } catch (error) {

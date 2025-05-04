@@ -40,7 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUserData = async () => {
     setIsLoading(true);
     try {
+      console.log("Loading user data from token");
       const userData = await auth.getCurrentUser();
+      console.log("User data loaded:", userData);
       setUser(userData);
       
       // For demonstration purposes, we'll consider user with token containing "admin" as admin
@@ -57,9 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log("Attempting login with:", email);
       const response = await auth.login(email, password);
       
       if (!response || !response.token || !response.user) {
+        console.error("Invalid login response:", response);
         toast({
           title: "Login Failed",
           description: "Invalid response from the server.",
@@ -101,10 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     customer_address: string;
   }) => {
     try {
+      console.log("Registering new user:", userData.email);
       const response = await auth.register(userData);
       
       // Check if we have a valid response with user data
       if (!response || !response.user) {
+        console.error("Invalid registration response:", response);
         toast({
           title: "Registration Failed",
           description: "Invalid response from the server.",

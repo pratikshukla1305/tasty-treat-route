@@ -17,6 +17,32 @@ const mockTables = {
   payment_table: [] as any[]
 };
 
+// Initialize mock data from localStorage
+function initMockDataFromStorage() {
+  try {
+    const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
+    const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
+    
+    mockTables.users = storedUsers;
+    mockTables.customer = storedCustomers;
+    
+    console.log('Loaded mock data from localStorage:', {
+      users: mockTables.users.length,
+      customers: mockTables.customer.length
+    });
+  } catch (error) {
+    console.error('Error loading mock data from localStorage:', error);
+    // If there was an error, clear the localStorage and start fresh
+    localStorage.setItem('mockUsers', JSON.stringify([]));
+    localStorage.setItem('mockCustomers', JSON.stringify([]));
+  }
+}
+
+// Call this on initialization
+if (isBrowser) {
+  initMockDataFromStorage();
+}
+
 // Mock implementation for browser
 const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
   console.log('Mock DB Query:', { sql, params });
@@ -39,9 +65,7 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
       mockTables.users.push(newUser);
       
       // Store in localStorage to persist across page refreshes
-      const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
-      storedUsers.push(newUser);
-      localStorage.setItem('mockUsers', JSON.stringify(storedUsers));
+      localStorage.setItem('mockUsers', JSON.stringify(mockTables.users));
       
       console.log('Created new user:', newUser);
       return { insertId: newUser.user_id } as unknown as T;
@@ -61,9 +85,7 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
       mockTables.customer.push(newCustomer);
       
       // Store in localStorage to persist across page refreshes
-      const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
-      storedCustomers.push(newCustomer);
-      localStorage.setItem('mockCustomers', JSON.stringify(storedCustomers));
+      localStorage.setItem('mockCustomers', JSON.stringify(mockTables.customer));
       
       console.log('Created new customer:', newCustomer);
       return { insertId: newCustomer.customer_id } as unknown as T;
@@ -73,16 +95,8 @@ const mockQuery = async <T>(sql: string, params?: any[]): Promise<T> => {
   } 
   // For SELECT queries
   else if (sql.toLowerCase().includes('select')) {
-    // Load stored data from localStorage
-    if (!mockTables.users.length) {
-      const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
-      mockTables.users = storedUsers;
-    }
-    
-    if (!mockTables.customer.length) {
-      const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
-      mockTables.customer = storedCustomers;
-    }
+    // Load stored data from localStorage - ensure we have latest data
+    initMockDataFromStorage();
     
     if (sql.includes('users WHERE email = ?') && params) {
       const email = params[0];
@@ -166,7 +180,7 @@ if (!isBrowser) {
       host: process.env.DB_HOST || 'localhost',
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || 'Rudraksh2005.',
-      database: process.env.DB_NAME || 'foodorderingdb', // Updated to match your database name
+      database: process.env.DB_NAME || 'foodorderingdb',
     };
 
     // Create connection pool
@@ -215,20 +229,43 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-// Load stored mock data from localStorage on initialization
-if (isBrowser) {
-  try {
-    const storedUsers = JSON.parse(localStorage.getItem('mockUsers') || '[]');
-    const storedCustomers = JSON.parse(localStorage.getItem('mockCustomers') || '[]');
+// Create a demo account if it doesn't exist
+export async function ensureDemoAccount() {
+  if (isBrowser) {
+    const demoEmail = "demo@example.com";
+    const demoPassword = "password123";
     
-    mockTables.users = storedUsers;
-    mockTables.customer = storedCustomers;
+    // Check if demo account exists
+    const existingUsers = await query<any[]>('SELECT * FROM users WHERE email = ?', [demoEmail]);
     
-    console.log('Loaded mock data from localStorage:', {
-      users: mockTables.users.length,
-      customers: mockTables.customer.length
-    });
-  } catch (error) {
-    console.error('Error loading mock data from localStorage:', error);
+    if (!existingUsers.length) {
+      console.log("Creating demo account");
+      
+      // Create user
+      const userResult = await query<any>(
+        'INSERT INTO users (email, password, role) VALUES (?, ?, "customer")',
+        [demoEmail, demoPassword]
+      );
+      
+      const userId = userResult.insertId;
+      
+      // Create customer
+      await query(
+        'INSERT INTO customer (user_id, customer_name, customer_contact_number, customer_address) VALUES (?, ?, ?, ?)',
+        [userId, "Demo User", "1234567890", "123 Demo Street"]
+      );
+      
+      console.log("Demo account created successfully");
+      return true;
+    }
+    
+    return false;
   }
+  
+  return false;
+}
+
+// Call this on initialization to ensure demo account exists
+if (isBrowser) {
+  ensureDemoAccount().catch(console.error);
 }
