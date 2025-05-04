@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/Layout/MainLayout";
@@ -83,21 +82,18 @@ const Checkout = () => {
         order_status: "pending"
       };
 
-      // In a real app, this would call your API
-      // const response = await orders.create(orderData);
+      // Actually create the order in our mock database
+      const response = await orders.create(orderData);
+      console.log("Order created:", response);
       
-      // For demo, we'll simulate a successful response
-      setTimeout(() => {
-        toast({
-          title: "Order Placed Successfully!",
-          description: "Your order has been confirmed and is being prepared.",
-          variant: "default",
-        });
+      toast({
+        title: "Order Placed Successfully!",
+        description: "Your order has been confirmed and is being prepared.",
+        variant: "default",
+      });
         
-        clearCart();
-        navigate("/order-confirmation");
-        setIsSubmitting(false);
-      }, 1500);
+      clearCart();
+      navigate("/order-confirmation", { state: { orderId: response.order_id } });
     } catch (error) {
       console.error("Failed to place order:", error);
       toast({
@@ -105,6 +101,7 @@ const Checkout = () => {
         description: "There was an issue placing your order. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };

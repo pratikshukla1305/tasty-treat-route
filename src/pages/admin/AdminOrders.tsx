@@ -21,7 +21,7 @@ import {
   ChevronDown, Search, MoreHorizontal, Phone, Store, 
   MapPin, Calendar, Clock, CreditCard, User, Package
 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { testConnection } from "@/lib/db";
 
 const AdminOrders = () => {
@@ -173,19 +173,19 @@ const AdminOrders = () => {
                           <TableCell>
                             <div className="flex items-center">
                               <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {order.customer_id}
+                              {order.customer_name || order.customer_id}
                             </div>
                           </TableCell>
                           <TableCell>{order.restaurant_name}</TableCell>
                           <TableCell>
                             {new Date(order.ordered_time || "").toLocaleDateString()}
                           </TableCell>
-                          <TableCell>₹{order.total_amount}</TableCell>
+                          <TableCell>₹{order.total_amount?.toFixed(2)}</TableCell>
                           <TableCell>{order.order_status}</TableCell>
                           <TableCell>
                             <div className="flex items-center">
                               <Package className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {order.deliveryp_id || "Not assigned"}
+                              {order.deliveryp_name || "Not assigned"}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
@@ -224,7 +224,7 @@ const AdminOrders = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
                                   <DropdownMenu>
-                                    <DropdownMenuTrigger>Assign Delivery Partner</DropdownMenuTrigger>
+                                    <DropdownMenuTrigger className="w-full text-left">Assign Delivery Partner</DropdownMenuTrigger>
                                     <DropdownMenuContent>
                                       {deliveryPartners && deliveryPartners.map((partner) => (
                                         <DropdownMenuItem

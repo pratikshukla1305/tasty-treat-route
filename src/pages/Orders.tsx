@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -18,12 +17,17 @@ const OrderStatusBadge = ({ status }: { status: string }) => {
         return "bg-green-100 text-green-800 border-green-200";
       case "preparing":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "shipped":
       case "out_for_delivery":
         return "bg-amber-100 text-amber-800 border-amber-200";
       case "delivered":
         return "bg-purple-100 text-purple-800 border-purple-200";
       case "cancelled":
         return "bg-red-100 text-red-800 border-red-200";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "processing":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -46,67 +50,17 @@ const Orders = () => {
     return null;
   }
 
-  // For production, we would use a real API call
+  // Use the real API call to get user orders
   const { data: userOrders = [], isLoading } = useQuery({
     queryKey: ["userOrders"],
     queryFn: () => orders.getUserOrders(),
     enabled: !!user,
   });
 
-  // Mock order data for development
-  const mockOrders: Order[] = [
-    {
-      order_id: 2340,
-      customer_id: user.customer_id,
-      res_id: 306,
-      restaurant_name: "Alankar Inn",
-      order_status: "delivered",
-      ordered_time: "2023-05-17 08:45:37",
-      delivered_time: "2023-05-17 09:30:16",
-      total_amount: 806.50,
-      items: [
-        { food_id: 3000112, food_name: "Ulavacharu Biryani", quantity: 2, price_per_unit: 230 },
-        { food_id: 3000106, food_name: "Gutti Vankaya Curry", quantity: 1, price_per_unit: 150 }
-      ],
-      payment_type: "cod",
-      payment_status: "paid"
-    },
-    {
-      order_id: 2339,
-      customer_id: user.customer_id,
-      res_id: 309,
-      restaurant_name: "Hotel Arina",
-      order_status: "confirmed",
-      ordered_time: "2023-05-17 09:49:18",
-      items: [
-        { food_id: 3000137, food_name: "Nachos", quantity: 3, price_per_unit: 110 }
-      ],
-      total_amount: 330,
-      payment_type: "cod",
-      payment_status: "paid"
-    },
-    {
-      order_id: 2331,
-      customer_id: user.customer_id,
-      res_id: 304,
-      restaurant_name: "Sitara Grand",
-      order_status: "cancelled",
-      ordered_time: "2023-05-17 18:00:21",
-      items: [
-        { food_id: 3000129, food_name: "Punugulu", quantity: 3, price_per_unit: 80 }
-      ],
-      total_amount: 240,
-      payment_type: "upi",
-      payment_status: "refunded"
-    }
-  ];
-
-  const orders = userOrders.length > 0 ? userOrders : mockOrders;
-  
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = userOrders.filter(order => {
     if (activeTab === "all") return true;
     if (activeTab === "active") {
-      return ["confirmed", "preparing", "out_for_delivery"].includes(order.order_status?.toLowerCase() || "");
+      return ["pending", "confirmed", "preparing", "shipped", "out_for_delivery"].includes(order.order_status?.toLowerCase() || "");
     }
     if (activeTab === "completed") {
       return order.order_status?.toLowerCase() === "delivered";
